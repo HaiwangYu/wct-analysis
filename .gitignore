@@ -1,0 +1,13 @@
+*.h5
+*.pdf
+*.csv
+log
+*.log
+*.root
+*.json
+*.npz
+*.pptx
+*.swp
+*/cfg
+*/backup
+*/tmp/
