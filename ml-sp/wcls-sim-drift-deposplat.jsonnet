@@ -126,7 +126,7 @@ local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
 local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
-local sp = sp_maker(params, tools);
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local deposplats = [sim.make_ductor('splat%d'%n, tools.anodes[n], tools.pirs[0], 'DepoSplat') for n in anode_iota] ;
@@ -154,7 +154,7 @@ local wcls_simchannel_sink = g.pnode({
     },
 }, nin=1, nout=1, uses=tools.anodes);
 
-local magoutput = 'protodune-data-check.root';
+local magoutput = 'g4-rec-0.root';
 local magnify = import 'pgrapher/experiment/pdsp/magnify-sinks.jsonnet';
 local sinks = magnify(tools, magoutput);
 
@@ -178,7 +178,18 @@ local reco_saver = [g.pnode({
       name: 'reco_saver%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['orig%d' % n, 'raw%d' % n, 'loose_lf%d' % n, 'tight_lf%d' % n, 'gauss%d' % n],
+        trace_tags: ['orig%d' % n
+        , 'raw%d' % n
+        , 'loose_lf%d' % n
+        , 'tight_lf%d' % n
+        , 'cleanup_roi%d' % n
+        , 'break_roi_1st%d' % n
+        , 'break_roi_2nd%d' % n
+        , 'shrink_roi%d' % n
+        , 'extend_roi%d' % n
+        , 'mp3_roi%d' % n
+        , 'mp2_roi%d' % n
+        , 'gauss%d' % n],
         filename: "g4-rec-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
@@ -188,16 +199,72 @@ local reco_saver = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local rio_orig = [g.pnode({
+      type: 'ExampleROOTAna',
+      name: 'rio_orig_apa%d' % n,
+      data: {
+        output_filename: "g4-rec-%d.root" % n,
+        anode: wc.tn(tools.anodes[n]),
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local rio_nf = [g.pnode({
+      type: 'ExampleROOTAna',
+      name: 'rio_nf_apa%d' % n,
+      data: {
+        output_filename: "g4-rec-%d.root" % n,
+        anode: wc.tn(tools.anodes[n]),
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local rio_sp = [g.pnode({
+      type: 'ExampleROOTAna',
+      name: 'rio_sp_apa%d' % n,
+      data: {
+        output_filename: "g4-rec-%d.root" % n,
+        anode: wc.tn(tools.anodes[n]),
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local img = import "pgrapher/experiment/pdsp/img.jsonnet";
+local use_blob_reframer = false;
+local perapa_img_pipelines = [
+    g.pipeline([
+        img.slicing(anode, anode.name),
+        img.tiling(anode, anode.name),
+        img.solving(anode, anode.name),
+        // img.clustering(anode, anode.name),
+      ]
+
+      + if use_blob_reframer=="true" then [
+        img.reframing(anode, anode.name),
+        img.magnify(anode, anode.name, "reframe"),
+        img.dumpframes(anode, anode.name),
+      ] else [
+        img.dump(anode, anode.name, params.lar.drift_speed),
+      ], 
+      "img-" + anode.name) for anode in tools.anodes];
+
 local reco_fork = [
   g.pipeline([
-               // wcls_simchannel_sink[n],
-               bagger[n],
-               sn_pipes[n],
-              //  sinks.orig_pipe[n],             
-               nf_pipes[n],
-               sp_pipes[n],
-               reco_saver[n],
-               g.pnode({ type: 'DumpFrames', name: 'reco_fork%d'%n }, nin=1, nout=0)
+              // wcls_simchannel_sink[n],
+              bagger[n],
+              sn_pipes[n],
+              // rio_orig[n],
+              // sinks.orig_pipe[n],
+              nf_pipes[n],
+              // rio_nf[n],
+              sp_pipes[n],
+              reco_saver[n],
+              // rio_sp[n],
+              g.pnode({ type: 'DumpFrames', name: 'reco_fork%d'%n }, nin=1, nout=0),
+              // perapa_img_pipelines[n],
              ],
              'reco_fork%d' % n)
   for n in anode_iota
@@ -230,17 +297,12 @@ local frame_fanin = [g.pnode({
 
 local frame_sink = g.pnode({ type: 'DumpFrames' }, nin=1, nout=0);
 
-// local multipass = [g.intern(innodes=[depo_fanout[n]], centernodes=[truth_fork[n], reco_fork[n]], outnodes=[frame_fanin[n]],
-//                      edges = [
-//                        g.edge(depo_fanout[n], truth_fork[n],  0, 0),
-//                        g.edge(truth_fork[n],  frame_fanin[n], 0, 0),
-//                        g.edge(depo_fanout[n], reco_fork[n],   1, 0),
-//                        g.edge(reco_fork[n],   frame_fanin[n], 0, 1)]) for n in anode_iota];
-
 local multipass = [g.intern(innodes=[depo_fanout[n]], centernodes=[truth_fork[n], reco_fork[n]], outnodes=[],
                      edges = [
                        g.edge(depo_fanout[n], truth_fork[n],  0, 0),
                        g.edge(depo_fanout[n], reco_fork[n],   1, 0)]) for n in anode_iota];
+
+// local multipass = [reco_fork[n] for n in anode_iota];
 
 local outtags = ['orig%d' % n for n in anode_iota];
 // local bi_manifold = f.fanpipe('DepoFanout', multipass, 'FrameFanin', 'sn_mag_nf', outtags);

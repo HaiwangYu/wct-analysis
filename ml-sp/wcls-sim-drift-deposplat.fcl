@@ -12,9 +12,9 @@ physics :{
             # apps: ["TbbFlow"]
 
             logsinks: ["stdout", "wcls-sim-drift-deposplat.log"]
-            loglevels: ["info", "io:info"]
+            loglevels: ["info"]
 
-            plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb"]
+            plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb",'WireCellImg']
 
             // needs to be found via your WIRECELL_PATH 
             configs: ["wcls-sim-drift-deposplat.jsonnet"]

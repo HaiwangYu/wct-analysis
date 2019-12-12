@@ -41,4 +41,4 @@ def comp(ch, tmin, tmax):
 
 if __name__ == '__main__':
   for ch in range(0, 100, 10):
-    comp(ch, 4300, 4500)
+    comp(ch, 0, 1000)

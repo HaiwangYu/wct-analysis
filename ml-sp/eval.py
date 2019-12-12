@@ -22,7 +22,7 @@ def eval(f0m, f1m):
 
 if __name__ == '__main__':
 
-  event = 95
+  event = 0
 
   # truth
   apa   = 0
@@ -67,7 +67,7 @@ if __name__ == '__main__':
   , extent = [0 , 2560, 0 , 600]
   , origin='lower'
   # , aspect='auto'
-  , alpha=0.3
+  , alpha=0.4
   )
   plt.xlim([0, 800])
   # plt.ylim([3000, 4000])
