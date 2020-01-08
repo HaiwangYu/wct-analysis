@@ -1,4 +1,8 @@
 process_name: wclssim
+
+# "Pgrapher" or "TbbFlow"
+wc_engine: "Pgrapher"
+
 physics :{
    producers: {
       plopper : {
@@ -8,8 +12,7 @@ physics :{
          module_type : WireCellToolkit
          wcls_main: {
             tool_type: WCLS
-            apps: ["Pgrapher"]
-            # apps: ["TbbFlow"]
+            apps: [@local::wc_engine]
 
             logsinks: ["stdout", "wcls-sim-drift-deposplat.log"]
             loglevels: ["info"]
@@ -36,11 +39,15 @@ physics :{
             params: {
                // Set "data" vs. "sim".  The epoch below probably should follow suit.
                reality: "data"
+               
+               // "Pgrapher" or "TbbFlow"
+               engine: @local::wc_engine
             }
          }
       }
    }
-   p1 : [ plopper, tpcrawdecoder ]
+   # p1 : [ plopper, tpcrawdecoder ]
+   p1 : [ tpcrawdecoder ]
    outputFiles : []
    
    trigger_paths : [ p1 ]

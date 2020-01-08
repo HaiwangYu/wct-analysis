@@ -114,7 +114,7 @@ local chndb = [{
 local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
-local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true });
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, use_multi_plane_protection: false });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local fansel = g.pnode({
@@ -215,10 +215,10 @@ local rio_sp = [g.pnode({
 local pipelines = [
   g.pipeline([
               nf_pipes[n],
-              // rio_nf[n],
+              rio_nf[n],
               sp_pipes[n],
               // npy_frame_saver[n],
-              // rio_sp[n],
+              rio_sp[n],
               hdf5_frame_saver[n],
              ],
              'nfsp_pipe_%d' % n)

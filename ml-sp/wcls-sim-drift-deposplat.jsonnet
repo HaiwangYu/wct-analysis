@@ -7,6 +7,7 @@
 // Output is a Python numpy .npz file.
 
 local reality = std.extVar('reality');
+local engine = std.extVar('engine');
 
 local g = import 'pgraph.jsonnet';
 local f = import 'pgrapher/common/funcs.jsonnet';
@@ -43,7 +44,8 @@ local output = 'wct-sim-ideal-sig.npz';
 local wcls_maker = import "pgrapher/ui/wcls/nodes.jsonnet";
 local wcls = wcls_maker(params, tools);
 local wcls_input = {
-    depos: wcls.input.depos(name="", art_tag="largeant:LArG4DetectorServicevolTPCActive"),
+    // depos: wcls.input.depos(name="", art_tag="largeant:LArG4DetectorServicevolTPCActive"),
+    depos: wcls.input.depos(name="", art_tag="IonAndScint"),
     // depos: wcls.input.depos(name="", art_tag="ionization"),
     // depos: wcls.input.depos(name="electron"),  // default art_tag="blopper"
 };
@@ -94,13 +96,14 @@ local wcls_output = {
 //local deposio = io.numpy.depos(output);
 local drifter = sim.drifter;
 // local bagger = sim.make_bagger();
-local bagger = [g.pnode({
-        type:'DepoBagger',
-        name: "bagger%d"%n,
-        data: {
-            gate: [-250*wc.us, 2750*wc.us], // fixed
-        },
-    }, nin=1, nout=1) for n in anode_iota];
+local bagger = [sim.make_bagger("bagger%d"%n) for n in anode_iota];
+// local bagger = [g.pnode({
+//         type:'DepoBagger',
+//         name: "bagger%d"%n,
+//         data: {
+//             gate: [-250*wc.us, 2750*wc.us], // fixed
+//         },
+//     }, nin=1, nout=1) for n in anode_iota];
 
 // signal plus noise pipelines
 //local sn_pipes = sim.signal_pipelines;
@@ -158,9 +161,9 @@ local magoutput = 'g4-rec-0.root';
 local magnify = import 'pgrapher/experiment/pdsp/magnify-sinks.jsonnet';
 local sinks = magnify(tools, magoutput);
 
-local truth_saver = [g.pnode({
+local hio_truth = [g.pnode({
       type: 'HDF5FrameTap',
-      name: 'truth_saver%d' % n,
+      name: 'hio_truth%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
         trace_tags: ['ductor%d'%n],
@@ -173,9 +176,9 @@ local truth_saver = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local reco_saver = [g.pnode({
+local hio_sp = [g.pnode({
       type: 'HDF5FrameTap',
-      name: 'reco_saver%d' % n,
+      name: 'hio_sp%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
         trace_tags: ['orig%d' % n
@@ -256,12 +259,11 @@ local reco_fork = [
               // wcls_simchannel_sink[n],
               bagger[n],
               sn_pipes[n],
-              // rio_orig[n],
               // sinks.orig_pipe[n],
               nf_pipes[n],
               // rio_nf[n],
               sp_pipes[n],
-              reco_saver[n],
+              hio_sp[n],
               // rio_sp[n],
               g.pnode({ type: 'DumpFrames', name: 'reco_fork%d'%n }, nin=1, nout=0),
               // perapa_img_pipelines[n],
@@ -273,7 +275,7 @@ local reco_fork = [
 local truth_fork = [
   g.pipeline([
                deposplats[n],
-               truth_saver[n],
+               hio_truth[n],
                g.pnode({ type: 'DumpFrames', name: 'truth_fork%d'%n  }, nin=1, nout=0)
              ],
              'truth_fork%d' % n)
@@ -354,8 +356,7 @@ local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fa
                       );
 
 local app = {
-  type: 'Pgrapher',
-  // type: 'TbbFlow',
+  type: engine,
   data: {
     edges: g.edges(graph),
   },
