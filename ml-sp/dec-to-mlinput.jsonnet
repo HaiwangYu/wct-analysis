@@ -194,7 +194,7 @@ local rio_nf = [g.pnode({
       type: 'ExampleROOTAna',
       name: 'rio_nf_apa%d' % n,
       data: {
-        output_filename: "g4-rec-%d.root" % n,
+        output_filename: "data-%d.root" % n,
         anode: wc.tn(tools.anodes[n]),
       },  
     }, nin=1, nout=1),
@@ -205,7 +205,7 @@ local rio_sp = [g.pnode({
       type: 'ExampleROOTAna',
       name: 'rio_sp_apa%d' % n,
       data: {
-        output_filename: "g4-rec-%d.root" % n,
+        output_filename: "data-%d.root" % n,
         anode: wc.tn(tools.anodes[n]),
       },  
     }, nin=1, nout=1),
