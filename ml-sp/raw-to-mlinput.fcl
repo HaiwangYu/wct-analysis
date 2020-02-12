@@ -39,11 +39,11 @@ physics :{
             tool_type: WCLS
             apps: [@local::wc_engine]
 
-            logsinks: ["stdout", "dec-to-mlinput.log"]
-            loglevels: ["info"]
+            logsinks: ["stdout", "wcls-raw-to-sig.log"]
+            loglevels: ["info", "io:debug"]
 
             // Libraries in which to look for WCT components
-            plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio", "WireCellPytorch"]
+            plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio"]
 
             // The tool marshals the art::Event to these visitors before.
             // See notes below in params.
@@ -62,7 +62,7 @@ physics :{
             // This sets the "main" Jsonnet file which provides the 
             // configuration for the Wire-Cell Toolkit components.  It is
             // take as relative to entries in WIRECELL_PATH.
-            configs: ["dec-to-mlinput.jsonnet"]
+            configs: ["raw-to-sig.jsonnet"]
 
             // Set the "external variables" required by the Jsonnet.
             params : {

@@ -19,8 +19,6 @@ local tools = tools_orig {
 };
 
 
-local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
-
 // Collect the WC/LS input converters for use below.  Make sure the
 // "name" argument matches what is used in the FHiCL that loads this
 // file.  In particular if there is no ":" in the inputer then name
@@ -114,7 +112,9 @@ local chndb = [{
 local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
-local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, use_multi_plane_protection: false });
+local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
+// local sp_maker = import 'sp-cuda.jsonnet';
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true , process_planes: [0, 1, 2] });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local fansel = g.pnode({
@@ -153,7 +153,7 @@ local magbr_gauss = magnify_gauss.magnify_pipelines;
 local magbr_thr = magnify_thr.magnifysummaries_pipelines;
 
     
-local npy_frame_saver = [g.pnode({
+local npy_sp = [g.pnode({
       type: 'NumpyFrameSaver',
       name: 'apa%d' % n,
       data: {
@@ -164,9 +164,9 @@ local npy_frame_saver = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local hdf5_frame_saver = [g.pnode({
+local hio_sp = [g.pnode({
       type: 'HDF5FrameTap',
-      name: 'reco_saver%d' % n,
+      name: 'hio_sp%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
         trace_tags: ['orig%d' % n
@@ -180,7 +180,24 @@ local hdf5_frame_saver = [g.pnode({
         , 'extend_roi%d' % n
         , 'mp3_roi%d' % n
         , 'mp2_roi%d' % n
+        , 'decon_charge%d' % n
+        , 'dnn_sp%d' % n
         , 'gauss%d' % n],
+        filename: "data-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: true,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local hio_dnn = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_dnn%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['dnn_sp%d' % n],
         filename: "data-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
@@ -212,14 +229,32 @@ local rio_sp = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local dnn_roi_finding = [g.pnode({
+      type: 'DNNROIFinding',
+      name: 'dnn_roi_finding_apa%d' % n,
+      data: {
+        model: 'model.ts',
+        gpu: true,
+        intags: ['loose_lf%d'%n, 'mp2_roi%d'%n, 'mp3_roi%d'%n],
+        outtag: "dnn_sp%d"%n,
+        anode: wc.tn(tools.anodes[n]),
+        cbeg: 800,
+        cend: 1600,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
 local pipelines = [
   g.pipeline([
               nf_pipes[n],
-              rio_nf[n],
+              // rio_nf[n],
               sp_pipes[n],
-              // npy_frame_saver[n],
-              rio_sp[n],
-              hdf5_frame_saver[n],
+              // npy_sp[n],
+              // rio_sp[n],
+              hio_sp[n],
+              dnn_roi_finding[n],
+              hio_dnn[n],
              ],
              'nfsp_pipe_%d' % n)
   for n in anode_iota

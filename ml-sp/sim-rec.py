@@ -16,7 +16,9 @@ def show_frame(data, event, apa, tag) :
   f = data.get(key)
   if f is None:
     print('f is None')
+    return
   frame = np.array(f)
+  print(frame.shape)
   frame_ma = np.ma.array(frame)
 
   plt.gca().set_title(tag)
@@ -26,11 +28,11 @@ def show_frame(data, event, apa, tag) :
   # plt.imshow(np.ma.masked_where(frame_ma<=0,frame_ma), cmap="rainbow", interpolation="none"
   # plt.imshow(frame_ma>0, cmap="viridis", interpolation="none"
   plt.imshow(frame_ma, cmap="bwr", interpolation="none"
-  , extent = [0 , 2560, 0 , 6000]
+  # , extent = [0 , 2560, 0 , 6000]
   , origin='lower'
-  # , aspect='auto'
+  , aspect='auto'
   # , aspect=0.8/4.7
-  , aspect=0.1
+  # , aspect=0.1
   )
   # plt.colorbar()
   # plt.xlim([0, 2560])
@@ -47,21 +49,22 @@ def show_frame(data, event, apa, tag) :
 if __name__ == '__main__':
   apa = 0
   tags = [
-    'mp2_roi',
-    'tight_lf',
-    'loose_lf',
+    # 'decon_charge',
+    # 'tight_lf',
+    # 'loose_lf',
+    # 'mp2_roi',
+    # 'mp3_roi',
     # 'cleanup_roi',
-    'mp3_roi',
     # 'break_roi_1st',
     # 'break_roi_2nd',
     # 'shrink_roi',
     # 'extend_roi',
-    # 'gauss'
+    # 'dnn_sp'
+    'gauss'
   ]
   
 
-  # data = h5py.File('cosmic-500-event-IonAndScint/g4-rec-%d.h5'%apa, 'r')
-  data = h5py.File('g4-rec-%d.h5'%apa, 'r')
+  data = h5py.File('data-%d.h5'%apa, 'r')
 
 
   plt.figure()

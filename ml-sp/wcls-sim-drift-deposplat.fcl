@@ -17,7 +17,7 @@ physics :{
             logsinks: ["stdout", "wcls-sim-drift-deposplat.log"]
             loglevels: ["info"]
 
-            plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb",'WireCellImg']
+            plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb",'WireCellImg',"WireCellPytorch"]
 
             // needs to be found via your WIRECELL_PATH 
             configs: ["wcls-sim-drift-deposplat.jsonnet"]
@@ -26,7 +26,9 @@ physics :{
             // Contract note: these exact "type:name" must be used to identify
             // the configuration data structures for these components in the Jsonnet.
 
-            inputers: ["wclsSimDepoSource:"]
+            inputers: [
+              # "wclsSimDepoSource:"
+              ]
             outputers: [
               # "wclsSimChannelSink:postdrift",
               # "wclsFrameSaver:simdigits",
