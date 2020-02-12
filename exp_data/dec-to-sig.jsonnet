@@ -114,7 +114,7 @@ local chndb = [{
 local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
-local sp = sp_maker(params, tools, { sparse: true });
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, use_multi_plane_protection: false });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local fansel = g.pnode({
@@ -152,23 +152,35 @@ local magbr_raw = magnify_raw.magnify_pipelines;
 local magbr_gauss = magnify_gauss.magnify_pipelines;
 local magbr_thr = magnify_thr.magnifysummaries_pipelines;
 
-local ana = [g.pnode({
+local rio_nf = [g.pnode({
       type: 'ExampleROOTAna',
-      name: 'apa%d' % n,
+      name: 'rio_nf_apa%d' % n,
       data: {
-        output_filename: "frame-%d.root" % n,
+        output_filename: "data-%d.root" % n,
         anode: wc.tn(tools.anodes[n]),
       },  
     }, nin=1, nout=1),
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
+
+local rio_sp = [g.pnode({
+      type: 'ExampleROOTAna',
+      name: 'rio_sp_apa%d' % n,
+      data: {
+        output_filename: "data-%d.root" % n,
+        anode: wc.tn(tools.anodes[n]),
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
     
 local npy_frame_saver = [g.pnode({
       type: 'NumpyFrameSaver',
       name: 'apa%d' % n,
       data: {
         frame_tags: ["gauss%d" % n, "threshold%d" % n, "wiener%d" % n],
-        filename: "frame-%d.npz" % n,
+        filename: "data-%d.npz" % n,
       },  
     }, nin=1, nout=1),
     for n in std.range(0, std.length(tools.anodes) - 1)
@@ -178,9 +190,20 @@ local hdf5_frame_saver = [g.pnode({
       type: 'HDF5FrameTap',
       name: 'apa%d' % n,
       data: {
-        frame_tags: ["gauss%d" % n, "threshold%d" % n, "wiener%d" % n],
-        // filename: "frame-%d.hdf5" % n,
-        filename: "frame.hdf5",
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['orig%d' % n
+        , 'raw%d' % n
+        , 'loose_lf%d' % n
+        , 'tight_lf%d' % n
+        , 'cleanup_roi%d' % n
+        , 'break_roi_1st%d' % n
+        , 'break_roi_2nd%d' % n
+        , 'shrink_roi%d' % n
+        , 'extend_roi%d' % n
+        , 'mp_roi%d' % n
+        , 'gauss%d' % n],
+        filename: "data-%d.h5" % n,
+        // filename: "frame.h5",
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
         high_throughput: true,
@@ -191,11 +214,12 @@ local hdf5_frame_saver = [g.pnode({
 
 local pipelines = [
   g.pipeline([
-              nf_pipes[n],
-              sp_pipes[n],
-              // npy_frame_saver[n],
-              ana[n],
-              // hdf5_frame_saver[n],
+                nf_pipes[n],
+                // rio_nf[n],
+                sp_pipes[n],
+                // npy_frame_saver[n],
+                rio_sp[n],
+                hdf5_frame_saver[n],
              ],
              'nfsp_pipe_%d' % n)
   for n in anode_iota

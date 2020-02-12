@@ -27,7 +27,7 @@ source: {
 }
 
 # "Pgrapher" or "TbbFlow"
-wc_engine: "TbbFlow"
+wc_engine: "Pgrapher"
 
 physics :{
    producers: {
@@ -40,7 +40,7 @@ physics :{
             apps: [@local::wc_engine]
 
             logsinks: ["stdout", "wcls-dec-to-sig.log"]
-            loglevels: ["info", "io:debug"]
+            loglevels: ["info","sigproc:debug"]
 
             // Libraries in which to look for WCT components
             plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio"]

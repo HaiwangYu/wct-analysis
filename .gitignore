@@ -11,3 +11,8 @@ log
 */cfg
 */backup
 */tmp/
+hdf5_dev/
+sp_eval/
+tbb_dev/
+shoreman/
+ts-models/
