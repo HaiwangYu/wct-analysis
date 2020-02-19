@@ -36,12 +36,12 @@ local anode_iota = std.range(0, nanodes-1);
 //
 local track_length = 3.0;
 local track_head = [-3.0, 3.0, 0.2];
-// local track_direction = [0.580387,0.210183,0.563658]; # 45, 60 for APA1; 60, 45 for APA0
+local track_direction = [0.580387,0.210183,0.563658]; # 45, 60 for APA1; 60, 45 for APA0
 // local track_direction = [0.884280,0.000000,0.291771]; # 75, 75
 // local track_direction = [0.919190,0.000000,0.199583]; # 80, 80
 // local track_direction = [0.929411,0.000000,0.160846]; # 82, 82
 // local track_direction = [0.929818,-0.070778,0.151032]; # 85, 80
-local track_direction = [0.940569,0.000000,0.101331]; # 85, 85
+// local track_direction = [0.940569,0.000000,0.101331]; # 85, 85
 // local track_direction = [0.914219,-0.168842,0.180324]; # 87, 75
 // local track_direction = [0.942868,-0.028341,0.081213]; # 87, 85
 // local track_direction = [0.945172,0.000000,0.060997]; # 87, 87
@@ -185,7 +185,7 @@ local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
 local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
-local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true });
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, use_multi_plane_protection: false });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local deposplats = [sim.make_ductor('splat%d'%n, tools.anodes[n], tools.pirs[0], 'DepoSplat') for n in anode_iota] ;
@@ -232,14 +232,27 @@ local hio_truth = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local hio_orig = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_orig%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['orig%d'%n],
+        filename: "g4-rec-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: true,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
 local hio_sp = [g.pnode({
       type: 'HDF5FrameTap',
       name: 'hio_sp%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['orig%d' % n
-        , 'raw%d' % n
-        , 'loose_lf%d' % n
+        trace_tags: ['loose_lf%d' % n
         , 'tight_lf%d' % n
         , 'cleanup_roi%d' % n
         , 'break_roi_1st%d' % n
@@ -329,11 +342,12 @@ local reco_fork = [
               bagger[n],
               sn_pipes[n],
               // sinks.orig_pipe[n],
-              nf_pipes[n],
-              rio_nf[n],
-              sp_pipes[n],
-              dnn_roi_finding[n],
-              hio_sp[n],
+              hio_orig[n],
+              // nf_pipes[n],
+              // rio_nf[n],
+              // sp_pipes[n],
+              // dnn_roi_finding[n],
+              // hio_sp[n],
               // rio_sp[n],
               g.pnode({ type: 'DumpFrames', name: 'reco_fork%d'%n }, nin=1, nout=0),
               // perapa_img_pipelines[n],
@@ -413,6 +427,7 @@ local retagger = g.pnode({
 //local frameio = io.numpy.frames(output);
 local sink = sim.frame_sink;
 
+// trackdepo as input
 local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
                       edges = 
                       [
@@ -422,14 +437,15 @@ local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_
                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
                       );
 
-// local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
-//                       edges = 
-//                       [
-//                         g.edge(wcls_input.depos, drifter, 0, 0),
-//                         g.edge(drifter, depo_fanout_1st, 0, 0),
-//                       ] +
-//                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
-//                       );
+// g4 sim as input
+local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
+                      edges = 
+                      [
+                        g.edge(wcls_input.depos, drifter, 0, 0),
+                        g.edge(drifter, depo_fanout_1st, 0, 0),
+                      ] +
+                      [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
+                      );
 
 local app = {
   type: engine,

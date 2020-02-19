@@ -15,7 +15,7 @@ physics :{
             apps: [@local::wc_engine]
 
             logsinks: ["stdout", "wcls-sim-drift-deposplat.log"]
-            loglevels: ["info"]
+            loglevels: ["debug"]
 
             plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb",'WireCellImg',"WireCellPytorch"]
 
@@ -27,7 +27,7 @@ physics :{
             // the configuration data structures for these components in the Jsonnet.
 
             inputers: [
-              # "wclsSimDepoSource:"
+              "wclsSimDepoSource:"
               ]
             outputers: [
               # "wclsSimChannelSink:postdrift",
