@@ -35,13 +35,13 @@ def show_frame(data, event, apa, tag) :
   # , aspect=0.1
   )
   # plt.colorbar()
-  plt.xlim([0, 1600])
+  # plt.xlim([0, 1600])
   # plt.xlim([0, 800]) # U
   # plt.xlim([800, 1600]) # V
   # plt.clim([0,1])
-  plt.clim([2300,2400]) # orig U, V
+  # plt.clim([2300,2400]) # orig U, V
   # plt.clim([885,915]) # orig W
-  # plt.clim([-4000,4000])
+  plt.clim([-4000,4000])
 
   plt.grid() 
   plt.show()
@@ -49,9 +49,9 @@ def show_frame(data, event, apa, tag) :
 
 
 if __name__ == '__main__':
-  apa = 0
+  apa = 2
   tags = [
-    'orig',
+    # 'orig',
     # 'decon_charge',
     # 'tight_lf',
     # 'loose_lf',
@@ -62,12 +62,12 @@ if __name__ == '__main__':
     # 'break_roi_2nd',
     # 'shrink_roi',
     # 'extend_roi',
-    # 'dnn_sp'
+    'dnn_sp'
     # 'gauss'
   ]
   
 
-  data = h5py.File('gpu-g4-3/g4-rec-%d.h5'%apa, 'r')
+  data = h5py.File('data-%d.h5'%apa, 'r')
 
 
   plt.figure()

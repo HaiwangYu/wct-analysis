@@ -15,7 +15,8 @@ local params = if reality == 'data' then data_params else simu_params;
 local tools_maker = import 'pgrapher/common/tools.jsonnet';
 local tools_orig = tools_maker(params);
 local tools = tools_orig {
-  anodes : [tools_orig.anodes[0]],
+  // anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
+  // anodes : [tools_orig.anodes[0]],
 };
 
 
@@ -164,49 +165,6 @@ local npy_sp = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local hio_sp = [g.pnode({
-      type: 'HDF5FrameTap',
-      name: 'hio_sp%d' % n,
-      data: {
-        anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['orig%d' % n
-        , 'raw%d' % n
-        , 'loose_lf%d' % n
-        , 'tight_lf%d' % n
-        , 'cleanup_roi%d' % n
-        , 'break_roi_1st%d' % n
-        , 'break_roi_2nd%d' % n
-        , 'shrink_roi%d' % n
-        , 'extend_roi%d' % n
-        , 'mp3_roi%d' % n
-        , 'mp2_roi%d' % n
-        , 'decon_charge%d' % n
-        , 'dnn_sp%d' % n
-        , 'gauss%d' % n],
-        filename: "data-%d.h5" % n,
-        chunk: [0, 0], // ncol, nrow
-        gzip: 2,
-        high_throughput: true,
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
-local hio_dnn = [g.pnode({
-      type: 'HDF5FrameTap',
-      name: 'hio_dnn%d' % n,
-      data: {
-        anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['dnn_sp%d' % n],
-        filename: "data-%d.h5" % n,
-        chunk: [0, 0], // ncol, nrow
-        gzip: 2,
-        high_throughput: true,
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
 local rio_nf = [g.pnode({
       type: 'ExampleROOTAna',
       name: 'rio_nf_apa%d' % n,
@@ -229,19 +187,73 @@ local rio_sp = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local hio_sp = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_sp%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['loose_lf%d' % n
+        , 'tight_lf%d' % n
+        , 'cleanup_roi%d' % n
+        , 'break_roi_1st%d' % n
+        , 'break_roi_2nd%d' % n
+        , 'shrink_roi%d' % n
+        , 'extend_roi%d' % n
+        , 'mp3_roi%d' % n
+        , 'mp2_roi%d' % n
+        , 'decon_charge%d' % n
+        , 'gauss%d' % n],
+        filename: "data-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: false,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local hio_dnn = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_dnn%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['dnn_sp%d' % n],
+        filename: "data-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: false,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local ts_dnnroi = {
+      type: 'TorchScript',
+      name: 'dnn_roi',
+      data: {
+        model: 'model.ts',
+        gpu: true,
+        wait_time: 500, #ms,
+        nloop: 100,
+      },  
+    };
+
 local dnn_roi_finding = [g.pnode({
       type: 'DNNROIFinding',
       name: 'dnn_roi_finding_apa%d' % n,
       data: {
-        model: 'model.ts',
-        gpu: true,
+        torch_script: wc.tn(ts_dnnroi),
+        // model: 'model.ts',
+        // gpu: true,
         intags: ['loose_lf%d'%n, 'mp2_roi%d'%n, 'mp3_roi%d'%n],
+        decon_charge_tag: 'decon_charge%d' % n,
         outtag: "dnn_sp%d"%n,
+        evalfile: "tsmodel-eval%d.h5"%n,
         anode: wc.tn(tools.anodes[n]),
         cbeg: 800,
         cend: 1600,
       },  
-    }, nin=1, nout=1),
+    }, nin=1, nout=1, uses=[ts_dnnroi]),
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 

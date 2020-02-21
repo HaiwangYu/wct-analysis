@@ -12,40 +12,36 @@ def get_wave(frame, key, ch, tick_min, tick_max):
   wave = frame[tick_min:tick_max, ch]
   return wave
 
-def comp(event, ch, tmin, tmax):
-  print('ch: ', ch, ': ', tmin, ', ', tmax)
+def diff(event):
 
   apa   = 3
   tag   = 'orig'
   tag   = 'dnn_sp'
-  # tag   = 'dlcharge'
+  tag   = 'dlcharge'
 
   # ref
   key   = '/%d/frame_%s%d'%(event,tag,apa)
   data  = h5py.File('6apa-service-gpu/data-%d.h5'%(apa), 'r')
-  # data  = h5py.File('6apa-service-gpu/tsmodel-eval.h5', 'r')
+  data  = h5py.File('6apa-service-gpu/tsmodel-eval.h5', 'r')
   frame = np.array(data[key])
-  # frame = np.transpose(frame, axes=[1, 0])
-  # frame = frame[:,800:1600]
-  w0 = get_wave(frame, key, ch, tmin, tmax)
+  f0 = np.transpose(frame, axes=[1, 0])
 
   # test
   data  = h5py.File('6apa-service-100loop-gpu/data-%d.h5'%(apa), 'r')
   data  = h5py.File('6apa-service-100loop-gpu/tsmodel-eval.h5', 'r')
-  data  = h5py.File('data-%d.h5'%(apa), 'r')
   key   = '/%d/frame_%s%d'%(event,tag,apa)
   frame = np.array(data[key])
-  # frame = np.transpose(frame, axes=[1, 0])
-  # frame = frame[:,800:1600]
-  w1 = get_wave(frame, key, ch, tmin, tmax)
+  f1 = np.transpose(frame, axes=[1, 0])
 
   plt.figure()
   a = plt.gca()
-  a.set_title('ch: '+str(ch))
+  a.set_title('event: '+str(event))
 
-  plt.plot(w0,'-o', label='2 APA')
-  plt.plot(w1,'-',  label='6 APA 100loop')
-  plt.legend(loc='best',fontsize=15)
+  plt.imshow(f1-f0, cmap="bwr", interpolation="none"
+  # , extent = [0 , 2560, 0 , 6000]
+  , origin='lower'
+  , aspect='auto')
+  plt.clim(-1,1)
   plt.grid()
   plt.show()
   
@@ -54,5 +50,4 @@ def comp(event, ch, tmin, tmax):
 
 
 if __name__ == '__main__':
-  for ch in range(800, 1600, 10):
-    comp(0, ch, 0, 6000)
+  diff(0)

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 if __name__ == '__main__':
-  apa = 0
+  apa = 2
   tags = [
     'dlroi',
     'dlcharge',
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     # 'ch2',
   ]
   
-  data = h5py.File('tsmodel-eval.h5','r')
+  data = h5py.File('6apa-service-gpu/tsmodel-eval.h5','r')
 
   xlim = [0, 800]
   # xlim = [800,1600]
