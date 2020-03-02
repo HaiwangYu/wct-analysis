@@ -12,7 +12,11 @@ log
 */cfg
 */backup
 */tmp/
-hdf5_dev/
+hdf5_dev/h5cpp
+hdf5_dev/h5py
+hdf5_dev/invest_cluster_structure
+hdf5_dev/test_numpy_frame_saver
+hdf5_dev/tmp
 sp_eval/
 tbb_dev/
 shoreman/
