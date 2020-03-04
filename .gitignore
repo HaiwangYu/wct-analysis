@@ -2,7 +2,7 @@
 *.ts
 *.pdf
 *.csv
-log
+log*
 *.log
 *.root
 *.json
