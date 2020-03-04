@@ -13,7 +13,7 @@ local params = if reality == 'data' then data_params else simu_params;
 local tools_maker = import 'pgrapher/common/tools.jsonnet';
 local tools_orig = tools_maker(params);
 local tools = tools_orig {
-  anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
+  // anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
   // anodes : [tools_orig.anodes[0]],
 };
 
@@ -42,7 +42,23 @@ local hio_orig = [g.pnode({
       data: {
         anode: wc.tn(tools.anodes[n]),
         trace_tags: ['orig%d' % n],
-        filename: "out-%d.h5" % n,
+        filename: "orig-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: false,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+
+local hio_nf = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_nf%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['raw%d' % n],
+        filename: "nf-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
         high_throughput: false,
@@ -57,7 +73,7 @@ local hio_sp = [g.pnode({
       data: {
         anode: wc.tn(tools.anodes[n]),
         trace_tags: ['gauss%d' % n],
-        filename: "out-%d.h5" % n,
+        filename: "sp-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
         high_throughput: false,
@@ -72,10 +88,10 @@ local hio_source = [g.pnode({
       data: {
         anode: wc.tn(tools.anodes[n]),
         filelist: ["input/orig-%d.h5"%n],
-        policy: "stream",
-        sequence_max: 2,
+        policy: "stream", # stream or not
+        sequence_max: 8,
       },  
-    }, nin=1, nout=1, uses=[tools.anodes[n]]),
+    }, nin=0, nout=1, uses=[tools.anodes[n]]),
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
@@ -84,7 +100,8 @@ local pipelines = [
               hio_source[n],
               // hio_orig[n],
               nf_pipes[n],
-              // sp_pipes[n],
+              // hio_nf[n],
+              sp_pipes[n],
               // hio_sp[n],
              ],
              'hio_pipe_%d' % n)
@@ -108,11 +125,11 @@ local fanin = g.pnode({
 }, nin=nanodes, nout=1);
 
 local fanpipe = g.intern(innodes=[],
-                         outnodes=[fanin],
-                         centernodes=pipelines,
-                         edges=
-                         [g.edge(pipelines[n], fanin, 0, n) for n in anode_iota],
-                         name='fanpipe');
+                        outnodes=[fanin],
+                        centernodes=pipelines,
+                        edges=
+                        [g.edge(pipelines[n], fanin, 0, n) for n in anode_iota],
+                        name='fanpipe');
 
 
 local sink = g.pnode({ type: 'DumpFrames' }, nin=1, nout=0);
@@ -125,7 +142,6 @@ local app = {
     edges: g.edges(graph),
   },
 };
-
 
 local cmdline = { 
     type: "wire-cell",
