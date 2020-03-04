@@ -19,21 +19,22 @@ local tools = tools_orig {
 
 local nanodes = std.length(tools.anodes);
 local anode_iota = std.range(0, nanodes - 1);
-// local nanodes = 1;
-// local anode_iota = std.range(0, 0);
 
-local hio_source = [g.pnode({
-      type: 'HDF5FrameSource',
-      name: 'hio_source%d' % n,
-      data: {
-        anode: wc.tn(tools.anodes[n]),
-        filelist: ["input/orig-%d.h5"%n],
-        policy: "",
-        sequence_max: 10,
-      },  
-    }, nin=1, nout=1, uses=[tools.anodes[n]]),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
+// local perfect = import 'chndb-perfect.jsonnet';
+local base = import 'pgrapher/experiment/pdsp/chndb-base.jsonnet';
+local chndb = [{
+  type: 'OmniChannelNoiseDB',
+  name: 'ocndbperfect%d' % n,
+  // data: perfect(params, tools.anodes[n], tools.field, n),
+  data: base(params, tools.anodes[n], tools.field, n),
+  uses: [tools.anodes[n], tools.field],  // pnode extension
+} for n in anode_iota];
+local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
+local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
+
+local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
+local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, use_multi_plane_protection: false , process_planes: [0, 1, 2] });
+local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local hio_orig = [g.pnode({
       type: 'HDF5FrameTap',
@@ -50,10 +51,41 @@ local hio_orig = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local hio_sp = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_sp%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        trace_tags: ['gauss%d' % n],
+        filename: "out-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: false,
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local hio_source = [g.pnode({
+      type: 'HDF5FrameSource',
+      name: 'hio_source%d' % n,
+      data: {
+        anode: wc.tn(tools.anodes[n]),
+        filelist: ["input/orig-%d.h5"%n],
+        policy: "stream",
+        sequence_max: 2,
+      },  
+    }, nin=1, nout=1, uses=[tools.anodes[n]]),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
 local pipelines = [
   g.pipeline([
               hio_source[n],
-              hio_orig[n],
+              // hio_orig[n],
+              nf_pipes[n],
+              // sp_pipes[n],
+              // hio_sp[n],
              ],
              'hio_pipe_%d' % n)
   for n in anode_iota
@@ -98,7 +130,7 @@ local app = {
 local cmdline = { 
     type: "wire-cell",
     data: {
-        plugins: ["WireCellGen", "WireCellPgraph", "WireCellTbb", "WireCellHio"],
+        plugins: ["WireCellGen", "WireCellPgraph", "WireCellTbb", "WireCellHio", "WireCellSigProc"],
         apps: [engine]
     }   
 };
