@@ -17,5 +17,5 @@ jsonnet \
 -o ${js}.json
 
 
-#wirecell-pgraph dotify --jpath -1 --no-params ${js}.json ${js}.pdf
-wirecell-pgraph dotify --jpath -1 ${js}.json ${js}.pdf
+wirecell-pgraph dotify --jpath -1 --no-params ${js}.json ${js}.pdf
+#wirecell-pgraph dotify --jpath -1 ${js}.json ${js}.pdf
