@@ -16,8 +16,6 @@ services:
   #IFBeam:            {}
 }
 
-
-
 source: {
    module_type: RootInput
    saveMemoryObjectThreshold: 10485760
@@ -27,7 +25,7 @@ source: {
 }
 
 # "Pgrapher" or "TbbFlow"
-wc_engine: "TbbFlow"
+wc_engine: "Pgrapher"
 
 physics :{
    producers: {
