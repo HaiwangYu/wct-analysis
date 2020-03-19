@@ -16,7 +16,7 @@ local tools_maker = import 'pgrapher/common/tools.jsonnet';
 local tools_orig = tools_maker(params);
 local tools = tools_orig {
   // anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
-  // anodes : [tools_orig.anodes[0]],
+  anodes : [tools_orig.anodes[0]],
 };
 
 
@@ -228,14 +228,14 @@ local hio_dnn = [g.pnode({
     ];
 
 local ts_dnnroi = {
-      type: 'TorchScript',
+      type: 'ZioTorchScript',
       name: 'dnn_roi',
       data: {
         model: 'model.ts',
         gpu: true,
         wait_time: 500, #ms,
         nloop: 100,
-      },  
+      },
     };
 
 local dnn_roi_finding = [g.pnode({
