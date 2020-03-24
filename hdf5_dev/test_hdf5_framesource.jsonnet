@@ -45,12 +45,11 @@ local hio_orig = [g.pnode({
         filename: "orig-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
-        high_throughput: false,
+        high_throughput: true,
       },  
     }, nin=1, nout=1),
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
-
 
 local hio_nf = [g.pnode({
       type: 'HDF5FrameTap',
@@ -89,7 +88,8 @@ local hio_source = [g.pnode({
         anode: wc.tn(tools.anodes[n]),
         filelist: ["input/orig-%d.h5"%n],
         policy: "stream", # stream or not
-        sequence_max: 8,
+        sequence_max: 2,
+        tag: "orig",
       },  
     }, nin=0, nout=1, uses=[tools.anodes[n]]),
     for n in std.range(0, std.length(tools.anodes) - 1)
@@ -98,10 +98,10 @@ local hio_source = [g.pnode({
 local pipelines = [
   g.pipeline([
               hio_source[n],
-              // hio_orig[n],
-              nf_pipes[n],
+              hio_orig[n],
+              // nf_pipes[n],
               // hio_nf[n],
-              sp_pipes[n],
+              // sp_pipes[n],
               // hio_sp[n],
              ],
              'hio_pipe_%d' % n)
