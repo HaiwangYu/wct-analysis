@@ -21,3 +21,4 @@ sp_eval/
 tbb_dev/
 shoreman/
 ts-models/
+*__pycache__

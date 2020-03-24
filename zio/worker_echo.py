@@ -6,7 +6,7 @@ Author: Min RK <benjaminrk@gmail.com>
 """
 
 import sys
-from generaldomo.worker import Worker
+from zio.domo.worker import Worker
 import zmq
 import zio
 import json

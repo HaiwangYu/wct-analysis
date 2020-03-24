@@ -17,6 +17,7 @@ import h5_utils as h5u
 
 def main():
     verbose = '-v' in sys.argv
+    service = "echo"
     client = Client("tcp://localhost:5555", zmq.CLIENT, verbose)
     requests = 1
     for i in range(requests):
@@ -30,8 +31,8 @@ def main():
                  level=zio.MessageLevel.warning,
                  payload=[img.tobytes()])
             mmsg = m.toparts()
-            print(mmsg)
-            client.send(b"echo", mmsg)
+            # print(mmsg)
+            client.send(service.encode(), mmsg)
         except KeyboardInterrupt:
             print ("send interrupted, aborting")
             return
@@ -48,9 +49,11 @@ def main():
                 break
             m = zio.Message()
             m.fromparts(reply)
-            print(m)
+            # print(m)
         count += 1
-    print ("%i requests/replies processed" % count)
+    # print ("%i requests/replies processed" % count)
+    if count > 0 :
+        print ("service \"%s\" ... OK" % service)
 
 if __name__ == '__main__':
     main()

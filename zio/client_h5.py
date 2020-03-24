@@ -17,6 +17,7 @@ import h5_utils as h5u
 
 def main():
     verbose = '-v' in sys.argv
+    service = "torch:dnnroi"
     client = Client("tcp://localhost:5555", zmq.CLIENT, verbose)
     fn = "test/data-0.h5"
     im_tags = ['frame_loose_lf0', 'frame_mp2_roi0', 'frame_mp3_roi0']    # l23
@@ -24,6 +25,7 @@ def main():
     for i in range(requests):
         img = h5u.get_hwc_img(fn, i%10, im_tags, [1, 10], [800, 1600], [0, 6000], 4000) # V
         img = np.transpose(img, axes=[2, 0, 1]) # chw image
+        img = np.expand_dims(img, axis=0) # bchw
         try:
             label_tens = [{"dtype":'f',"part":0,"shape":img.shape,"word":4}]
             label_meta = None
@@ -33,8 +35,8 @@ def main():
             m = zio.Message(form='TENS', label=label, 
                  level=zio.MessageLevel.warning,
                  payload=[img.tobytes()])
-            print(m)
-            client.send(b"torch", m.toparts())
+            # print(m)
+            client.send(service.encode(), m.toparts())
         except KeyboardInterrupt:
             print ("send interrupted, aborting")
             return
@@ -52,7 +54,7 @@ def main():
                 break
             m = zio.Message()
             m.fromparts(reply)
-            print(m)
+            # print(m)
             label = json.loads(m.label)
             shape = label["TENS"]["tensors"][0]["shape"]
             payload = m._payload[0]
@@ -60,7 +62,9 @@ def main():
             dset = out.create_dataset(name="/%d/mask"%count, shape=mask.shape, dtype='f', data=mask)
             # print('reply:\n', mask.shape)
         count += 1
-    print ("%i requests/replies processed" % count)
+    # print ("%i requests/replies processed" % count)
+    if count > 0 :
+        print ("service \"%s\" ... OK" % service)
 
 if __name__ == '__main__':
     main()

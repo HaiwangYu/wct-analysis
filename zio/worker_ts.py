@@ -16,7 +16,7 @@ import torch
 
 def main():
     verbose = '-v' in sys.argv
-    worker = Worker("tcp://localhost:5555", b"torch", zmq.CLIENT, verbose)
+    worker = Worker("tcp://localhost:5555", b"torch:dnnroi", zmq.CLIENT, verbose)
     model = "ts-model/unet1024-l23-cosmic500-e50-gpu.ts"
     net = torch.jit.load(model)
     reply = None
@@ -26,7 +26,7 @@ def main():
             break # Worker was interrupted
         m = zio.Message()
         m.fromparts(request)
-        logging.info('worker::recv: %s', m)
+        # logging.info('worker::recv: %s', m)
         label = json.loads(m.label)
         label_tens = label["TENS"]["tensors"]
         label_meta = label["TENS"]["metadata"]
@@ -41,7 +41,8 @@ def main():
         img_tensor = torch.from_numpy(img) # chw
         img_tensor = img_tensor.cuda()
         with torch.no_grad():
-            input = img_tensor.unsqueeze(0)
+            # input = img_tensor.unsqueeze(0)
+            input = img_tensor
             # logging.info("input.shape: %s", input.shape)
             # mask = net.forward(input).squeeze().cpu().numpy() # 2D
             mask = net.forward(input).cpu().numpy() # 4D
@@ -52,7 +53,7 @@ def main():
               label=json.dumps({"TENS":{"tensors":label_tens, "metadata":label_meta}}), 
               level=zio.MessageLevel.warning,
               payload=[mask.tobytes()])
-        logging.info('worker::send: %s', m)
+        # logging.info('worker::send: %s', m)
         reply = m.toparts()
 
 
