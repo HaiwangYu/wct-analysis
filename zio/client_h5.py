@@ -20,6 +20,7 @@ def main():
     service = "torch:dnnroi"
     client = Client("tcp://localhost:5555", zmq.CLIENT, verbose)
     fn = "test/data-0.h5"
+    # im_tags = ['frame_loose_lf0', 'frame_tight_lf0']    # lt
     im_tags = ['frame_loose_lf0', 'frame_mp2_roi0', 'frame_mp3_roi0']    # l23
     requests = 1
     for i in range(requests):

@@ -24,7 +24,7 @@ def main():
         img = np.zeros((2,2,20),dtype=np.float32)
         try:
             label_tens = [{"dtype":'f',"part":1,"shape":img.shape,"word":4}]
-            label_meta = {"tick":500}
+            label_meta = {}
             label_comb = {"TENS":{"tensors":label_tens, "metadata":label_meta}}
             label = json.dumps(label_comb)
             m = zio.Message(form='TENS', label=label, 

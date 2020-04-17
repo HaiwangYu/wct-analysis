@@ -6,6 +6,7 @@ Author: Min RK <benjaminrk@gmail.com>
 """
 
 import sys
+import logging
 from zio.domo.worker import Worker
 import zmq
 import zio
@@ -15,7 +16,7 @@ import torch
 
 def main():
     verbose = '-v' in sys.argv
-    worker = Worker("tcp://localhost:5555", b"echo", zmq.CLIENT, verbose)
+    worker = Worker("tcp://localhost:5555", b"echo", zmq.CLIENT, verbose=False)
     reply = None
     while True:
         request = worker.recv(reply)
@@ -23,8 +24,8 @@ def main():
             break # Worker was interrupted
         m = zio.Message()
         m.fromparts(request)
-        # m.decode(request)
-        print(m)
+        if verbose:
+            logging.info("echo: %s", m)
         reply = m.toparts()
 
 if __name__ == '__main__':
