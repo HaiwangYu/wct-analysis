@@ -16,9 +16,10 @@ import torch
 
 def main():
     verbose = '-v' in sys.argv
-    worker = Worker("tcp://localhost:5555", b"torch:dnnroi", zmq.CLIENT, verbose)
-    model = "ts-model/unet1024-l23-cosmic500-e50-gpu.ts"
+    worker = Worker("tcp://localhost:5555", b"torch:dnnroi", zmq.CLIENT, verbose=False)
+    model = "ts-model/unet-l23-cosmic500-e50.ts"
     net = torch.jit.load(model)
+    net.cuda()
     reply = None
     while True:
         request = worker.recv(reply)
@@ -29,7 +30,7 @@ def main():
         # logging.info('worker::recv: %s', m)
         label = json.loads(m.label)
         label_tens = label["TENS"]["tensors"]
-        label_meta = label["TENS"]["metadata"]
+        label_meta = label["TENS"].get("metadata")
         shape = label_tens[0]["shape"]
         # FIXME why a empty payload first
         payload = m._payload[0]
@@ -43,10 +44,11 @@ def main():
         with torch.no_grad():
             # input = img_tensor.unsqueeze(0)
             input = img_tensor
-            # logging.info("input.shape: %s", input.shape)
-            # mask = net.forward(input).squeeze().cpu().numpy() # 2D
+            if verbose:
+              logging.info("input.shape: %s", input.shape)
             mask = net.forward(input).cpu().numpy() # 4D
-            # logging.info("mask.shape: %s", mask.shape)
+            if verbose:
+              logging.info("mask.shape: %s", mask.shape)
 
         label_tens = [{"dtype":'f',"part":0,"shape":mask.shape,"word":4}]
         m = zio.Message(form='TENS',
