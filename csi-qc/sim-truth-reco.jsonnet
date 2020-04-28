@@ -100,10 +100,7 @@ local track_depos = sim.tracks(tracklist, step=1.0 * wc.mm);
 local wcls_maker = import "pgrapher/ui/wcls/nodes.jsonnet";
 local wcls = wcls_maker(params, tools);
 local wcls_input = {
-    // depos: wcls.input.depos(name="", art_tag="largeant:LArG4DetectorServicevolTPCActive"),
     depos: wcls.input.depos(name="", art_tag="IonAndScint"),
-    // depos: wcls.input.depos(name="", art_tag="ionization"),
-    // depos: wcls.input.depos(name="electron"),  // default art_tag="blopper"
 };
 
 // Collect all the wc/ls output converters for use below.  Note the
@@ -151,15 +148,7 @@ local wcls_output = {
 
 //local deposio = io.numpy.depos(output);
 local drifter = sim.drifter;
-// local bagger = sim.make_bagger();
 local bagger = [sim.make_bagger("bagger%d"%n) for n in anode_iota];
-// local bagger = [g.pnode({
-//         type:'DepoBagger',
-//         name: "bagger%d"%n,
-//         data: {
-//             gate: [-250*wc.us, 2750*wc.us], // fixed
-//         },
-//     }, nin=1, nout=1) for n in anode_iota];
 
 // signal plus noise pipelines
 //local sn_pipes = sim.signal_pipelines;
@@ -175,13 +164,7 @@ local chndb = [{
   uses: [tools.anodes[n], tools.field],  // pnode extension
 } for n in anode_iota];
 
-//local chndb_maker = import 'pgrapher/experiment/pdsp/chndb.jsonnet';
-//local noise_epoch = "perfect";
-//local noise_epoch = "after";
-//local chndb_pipes = [chndb_maker(params, tools.anodes[n], tools.fields[n]).wct(noise_epoch)
-//                for n in std.range(0, std.length(tools.anodes)-1)];
 local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
-// local nf_pipes = [nf_maker(params, tools.anodes[n], chndb_pipes[n]) for n in std.range(0, std.length(tools.anodes)-1)];
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
 local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
@@ -189,29 +172,6 @@ local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: false, us
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
 local deposplats = [sim.make_ductor('splat%d'%n, tools.anodes[n], tools.pirs[0], 'DepoSplat') for n in anode_iota] ;
-
-local rng = tools.random;
-local wcls_simchannel_sink = g.pnode({
-    type: 'wclsSimChannelSink',
-    name: 'postdrift',
-    data: {
-      artlabel: "simpleSC",    // where to save in art::Event
-      anodes_tn: [wc.tn(anode) for anode in tools.anodes],  
-      rng: wc.tn(rng),
-      tick: 0.5*wc.us,
-      start_time: -0.25*wc.ms,
-      readout_time: self.tick*6000,
-      nsigma: 3.0,
-      drift_speed: params.lar.drift_speed,
-      u_to_rp: 90.58*wc.mm,
-      v_to_rp: 95.29*wc.mm,
-      y_to_rp: 100*wc.mm,
-      u_time_offset: 0.0*wc.us,
-      v_time_offset: 0.0*wc.us,
-      y_time_offset: 0.0*wc.us,
-      use_energy: true,
-    },
-}, nin=1, nout=1, uses=tools.anodes);
 
 local magoutput = 'g4-rec-0.root';
 local magnify = import 'pgrapher/experiment/pdsp/magnify-sinks.jsonnet';
@@ -252,54 +212,12 @@ local hio_sp = [g.pnode({
       name: 'hio_sp%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['loose_lf%d' % n
-        , 'tight_lf%d' % n
-        , 'cleanup_roi%d' % n
-        , 'break_roi_1st%d' % n
-        , 'break_roi_2nd%d' % n
-        , 'shrink_roi%d' % n
-        , 'extend_roi%d' % n
-        , 'mp3_roi%d' % n
-        , 'mp2_roi%d' % n
-        , 'decon_charge%d' % n
-        , 'gauss%d' % n],
+        trace_tags: ['gauss%d' % n,
+        ],
         filename: "g4-rec-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
         high_throughput: true,
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
-local rio_orig = [g.pnode({
-      type: 'ExampleROOTAna',
-      name: 'rio_orig_apa%d' % n,
-      data: {
-        output_filename: "g4-rec-%d.root" % n,
-        anode: wc.tn(tools.anodes[n]),
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
-local rio_nf = [g.pnode({
-      type: 'ExampleROOTAna',
-      name: 'rio_nf_apa%d' % n,
-      data: {
-        output_filename: "g4-rec-%d.root" % n,
-        anode: wc.tn(tools.anodes[n]),
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
-local rio_sp = [g.pnode({
-      type: 'ExampleROOTAna',
-      name: 'rio_sp_apa%d' % n,
-      data: {
-        output_filename: "g4-rec-%d.root" % n,
-        anode: wc.tn(tools.anodes[n]),
       },  
     }, nin=1, nout=1),
     for n in std.range(0, std.length(tools.anodes) - 1)
@@ -324,31 +242,14 @@ local perapa_img_pipelines = [
       ], 
       "img-" + anode.name) for anode in tools.anodes];
 
-local dnn_roi_finding = [g.pnode({
-      type: 'DNNROIFinding',
-      name: 'dnn_roi_finding_apa%d' % n,
-      data: {
-        model: 'model.ts',
-        trace_tags: ['loose_lf%d'%n, 'mp2_roi%d'%n, 'mp3_roi%d'%n],
-        anode: wc.tn(tools.anodes[n]),
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
 local reco_fork = [
   g.pipeline([
-              // wcls_simchannel_sink[n],
               bagger[n],
               sn_pipes[n],
-              // sinks.orig_pipe[n],
               hio_orig[n],
-              // nf_pipes[n],
-              // rio_nf[n],
-              // sp_pipes[n],
-              // dnn_roi_finding[n],
-              // hio_sp[n],
-              // rio_sp[n],
+              nf_pipes[n],
+              sp_pipes[n],
+              hio_sp[n],
               g.pnode({ type: 'DumpFrames', name: 'reco_fork%d'%n }, nin=1, nout=0),
               // perapa_img_pipelines[n],
              ],
