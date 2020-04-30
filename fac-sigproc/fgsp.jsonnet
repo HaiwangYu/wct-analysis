@@ -114,7 +114,6 @@ local nf_maker = import 'pgrapher/experiment/pdsp/nf.jsonnet';
 local nf_pipes = [nf_maker(params, tools.anodes[n], chndb[n], n, name='nf%d' % n) for n in anode_iota];
 
 local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
-// local sp_maker = import 'sp-cuda.jsonnet';
 local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true , process_planes: [0, 1, 2] });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
@@ -131,33 +130,9 @@ local fansel = g.pnode({
   },
 }, nin=1, nout=nanodes, uses=tools.anodes);
 
-local magnify = import 'pgrapher/experiment/pdsp/multimagnify.jsonnet';
-local magoutput = 'protodune-data-check.root';
-
-local magnify_orig = magnify('orig', tools, magoutput);
-local magnify_raw = magnify('raw', tools, magoutput);
-local magnify_gauss = magnify('gauss', tools, magoutput);
-local magnify_thr = magnify('threshold', tools, magoutput);
-
-local magbr_orig = magnify_orig.magnify_pipelines;
-local magbr_raw = magnify_raw.magnify_pipelines;
-local magbr_gauss = magnify_gauss.magnify_pipelines;
-local magbr_thr = magnify_thr.magnifysummaries_pipelines;
-
 local rio_nf = [g.pnode({
       type: 'ExampleROOTAna',
       name: 'rio_nf_apa%d' % n,
-      data: {
-        output_filename: "data-%d.root" % n,
-        anode: wc.tn(tools.anodes[n]),
-      },  
-    }, nin=1, nout=1),
-    for n in std.range(0, std.length(tools.anodes) - 1)
-    ];
-
-local rio_sp = [g.pnode({
-      type: 'ExampleROOTAna',
-      name: 'rio_sp_apa%d' % n,
       data: {
         output_filename: "data-%d.root" % n,
         anode: wc.tn(tools.anodes[n]),
@@ -191,12 +166,12 @@ local hio_sp = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local hio_dnn = [g.pnode({
+local hio_orig = [g.pnode({
       type: 'HDF5FrameTap',
-      name: 'hio_dnn%d' % n,
+      name: 'hio_orig%d' % n,
       data: {
         anode: wc.tn(tools.anodes[n]),
-        trace_tags: ['dnn_sp%d' % n],
+        trace_tags: ['orig%d' % n],
         filename: "data-%d.h5" % n,
         chunk: [0, 0], // ncol, nrow
         gzip: 2,
@@ -206,63 +181,84 @@ local hio_dnn = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local simple_dnnroi = {
-      type: 'TorchScript',
-      name: 'dnn_roi',
+local hio_nf = [g.pnode({
+      type: 'HDF5FrameTap',
+      name: 'hio_nf%d' % n,
       data: {
-        model: 'ts-model/unet-l23-cosmic500-e50.ts',
-        gpu: true,
-        wait_time: 500, #ms,
-        nloop: 100,
-      },
-    };
-
-local zio_dnnroi = {
-      type: 'ZioTorchScript',
-      name: 'dnn_roi',
-      data: {
-        address: "tcp://localhost:5555",
-        service: "torch:dnnroi",
-        wait_time: 500, #ms,
-        nloop: 100,
-      },
-    };
-
-local ts_dnnroi = zio_dnnroi;
-
-local dnn_roi_finding = [g.pnode({
-      type: 'DNNROIFinding',
-      name: 'dnn_roi_finding_apa%d' % n,
-      data: {
-        torch_script: wc.tn(ts_dnnroi),
-        // model: 'model.ts',
-        // gpu: true,
-        intags: ['loose_lf%d'%n, 'mp2_roi%d'%n, 'mp3_roi%d'%n],
-        // intags: ['loose_lf%d'%n, 'tight_lf%d'%n],
-        decon_charge_tag: 'decon_charge%d' % n,
-        outtag: "dnn_sp%d"%n,
-        evalfile: "tsmodel-eval%d.h5"%n,
         anode: wc.tn(tools.anodes[n]),
-        cbeg: 800,
-        cend: 1600,
+        trace_tags: ['raw%d' % n],
+        filename: "data-%d.h5" % n,
+        chunk: [0, 0], // ncol, nrow
+        gzip: 2,
+        high_throughput: false,
       },  
-    }, nin=1, nout=1, uses=[ts_dnnroi]),
+    }, nin=1, nout=1),
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
+local tf2t = [g.pnode({
+      type: 'TaggedFrameTensorSet',
+      name: 'tf2t%d' % n,
+      data: {
+          "tensors": [
+              {"tag": "raw%d"%n},
+          ],
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+local tt2f = [g.pnode({
+      type: 'TaggedTensorSetFrame',
+      name: 'tt2f%d' % n,
+      data: {
+          "tensors": [
+              {"tag": "raw%d"%n},
+          ],
+      },  
+    }, nin=1, nout=1),
+    for n in std.range(0, std.length(tools.anodes) - 1)
+    ];
+
+
+local spfilt = import 'pgrapher/experiment/pdsp/sp-filters.jsonnet';
+local pc = tools.perchanresp_nameuses;
+local decon_init = [g.pnode({
+    type: 'Decon2DResponse',
+    name: 'decon_init%d' % n,
+    data: {
+        anode: wc.tn(tools.anodes[n]),
+        per_chan_resp: pc.name,
+        field_response: wc.tn(tools.field),
+        tag: "raw%d"%n,
+        },
+        }, nin=1, nout=1, uses=[tools.anodes[n], tools.field] + pc.uses + spfilt),
+        for n in std.range(0, std.length(tools.anodes) - 1)];
+
+local decon_tight0 = [g.pnode({
+    type: 'Decon2DFilter',
+    name: 'decon_tight0%d' % n,
+    data: {
+        tag: "raw%d"%n,
+        },
+        }, nin=1, nout=1, uses=[] + spfilt),
+        for n in std.range(0, std.length(tools.anodes) - 1)];
+
 local pipelines = [
-  g.pipeline([
-                nf_pipes[n],
-                // rio_nf[n],
-                sp_pipes[n],
-                // rio_sp[n],
-                hio_sp[n],
-                // dnn_roi_finding[n],
-                // hio_dnn[n],
-             ],
-             'nfsp_pipe_%d' % n)
-  for n in anode_iota
-];
+    g.pipeline([
+        // hio_orig[n],
+        nf_pipes[n],
+        
+        tf2t[n],
+        decon_init[n],
+        decon_tight0[n],
+        tt2f[n],
+        hio_nf[n],
+        
+        // sp_pipes[n],
+        // hio_sp[n],
+        ],'nfsp_pipe_%d' % n)
+        for n in anode_iota];
 
 local fanin = g.pnode({
   type: 'FrameFanin',

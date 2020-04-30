@@ -27,7 +27,7 @@ source: {
 }
 
 # "Pgrapher" or "TbbFlow"
-wc_engine: "TbbFlow"
+wc_engine: "Pgrapher"
 
 physics :{
    producers: {
@@ -40,10 +40,10 @@ physics :{
             apps: [@local::wc_engine]
 
             logsinks: ["stdout", "fgsp.log"]
-            loglevels: ["debug"]
+            loglevels: ["info", "sig:trace"]
 
             // Libraries in which to look for WCT components
-            plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio", "WireCellPytorch", "WireCellZio"]
+            plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio", "WireCellPytorch", "WireCellZio", "WireCellSig"]
 
             // The tool marshals the art::Event to these visitors before.
             // See notes below in params.
