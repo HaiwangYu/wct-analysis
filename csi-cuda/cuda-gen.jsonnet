@@ -36,7 +36,7 @@ local anode_iota = std.range(0, nanodes-1);
 //
 local track_length = 3.0;
 local track_head = [-3.0, 3.0, 0.2];
-local track_direction = [0.580387,0.210183,0.563658]; # 45, 60 for APA1; 60, 45 for APA0
+// local track_direction = [0.580387,0.210183,0.563658]; # 45, 60 for APA1; 60, 45 for APA0
 // local track_direction = [0.884280,0.000000,0.291771]; # 75, 75
 // local track_direction = [0.919190,0.000000,0.199583]; # 80, 80
 // local track_direction = [0.929411,0.000000,0.160846]; # 82, 82
@@ -44,7 +44,7 @@ local track_direction = [0.580387,0.210183,0.563658]; # 45, 60 for APA1; 60, 45 
 // local track_direction = [0.940569,0.000000,0.101331]; # 85, 85
 // local track_direction = [0.914219,-0.168842,0.180324]; # 87, 75
 // local track_direction = [0.942868,-0.028341,0.081213]; # 87, 85
-// local track_direction = [0.945172,0.000000,0.060997]; # 87, 87
+local track_direction = [0.945172,0.000000,0.060997]; # 87, 87
 // local track_direction = [0.944018,-0.056648,0.060997]; # 89, 85
 // local track_direction = [0.947480,0.000000,0.020365]; # 89, 89
 // local track_direction = [0.915474,-0.210183,0.151032]; # 90, 75
@@ -424,7 +424,7 @@ local retagger = g.pnode({
 //local frameio = io.numpy.frames(output);
 local sink = sim.frame_sink;
 
-// trackdepo as input
+// wire-cell - trackdepo as input
 local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
                       edges = 
                       [
@@ -433,8 +433,22 @@ local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_
                       ] +
                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
                       );
+local app = {
+  type: engine,
+  data: {
+    edges: g.edges(graph),
+  },
+};
+local cmdline = { 
+    type: "wire-cell",
+    data: {
+        plugins: ["WireCellGen", "WireCellPgraph", "WireCellSio", "WireCellSigProc", "WireCellHio"],
+        apps: ["Pgrapher"]
+    }   
+};
+[cmdline] + g.uses(graph) + [app]
 
-// g4 sim as input
+// lar - g4 sim as input
 // local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
 //                       edges = 
 //                       [
@@ -443,24 +457,11 @@ local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_
 //                       ] +
 //                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
 //                       );
-
-local app = {
-  type: engine,
-  data: {
-    edges: g.edges(graph),
-  },
-};
-
-// lar
+// local app = {
+//   type: engine,
+//   data: {
+//     edges: g.edges(graph),
+//   },
+// };
 // g.uses(graph) + [app]
 
-// wire-cell
-local cmdline = { 
-    type: "wire-cell",
-    data: {
-        plugins: ["WireCellGen", "WireCellPgraph", "WireCellSio", "WireCellSigProc", "WireCellHio"],
-        apps: ["Pgrapher"]
-    }   
-};
-
-[cmdline] + g.uses(graph) + [app]
