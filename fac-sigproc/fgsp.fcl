@@ -40,7 +40,7 @@ physics :{
             apps: [@local::wc_engine]
 
             logsinks: ["stdout", "fgsp.log"]
-            loglevels: ["info", "sig:trace"]
+            loglevels: ["info", "sig:trace", "tens::trace"]
 
             // Libraries in which to look for WCT components
             plugins: ["WireCellGen", "WireCellSigProc", "WireCellRoot", "WireCellPgraph", "WireCellLarsoft", "WireCellTbb", "WireCellHio", "WireCellSio", "WireCellPytorch", "WireCellZio", "WireCellSig"]

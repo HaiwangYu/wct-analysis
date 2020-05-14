@@ -117,19 +117,6 @@ local sp_maker = import 'pgrapher/experiment/pdsp/sp.jsonnet';
 local sp = sp_maker(params, tools, { sparse: true, use_roi_debug_mode: true, use_multi_plane_protection: true , process_planes: [0, 1, 2] });
 local sp_pipes = [sp.make_sigproc(a) for a in tools.anodes];
 
-local fansel = g.pnode({
-  type: 'ChannelSplitter',
-  name: 'peranode',
-  data: {
-    anodes: [wc.tn(a) for a in tools.anodes],
-    tag_rules: [{
-      frame: {
-        '.*': 'orig%d' % ind,
-      },
-    } for ind in anode_iota],
-  },
-}, nin=1, nout=nanodes, uses=tools.anodes);
-
 local rio_nf = [g.pnode({
       type: 'ExampleROOTAna',
       name: 'rio_nf_apa%d' % n,
@@ -240,18 +227,87 @@ local decon_tight0 = [g.pnode({
     name: 'decon_tight0%d' % n,
     data: {
         tag: "raw%d"%n,
+        filters: [
+            "HfFilter:Wiener_tight_U",
+            "LfFilter:ROI_tight_lf",
+        ],
         },
         }, nin=1, nout=1, uses=[] + spfilt),
         for n in std.range(0, std.length(tools.anodes) - 1)];
 
+local chsels = [
+    g.pnode({
+        type: 'ChannelSelector',
+        name: 'chsel-' + tools.anodes[ind].name,
+        data: {
+            channels: std.range(2560*ind, 2560*ind+800-1),
+            tags: ['orig%d' % ind],
+        },
+    }, nin=1, nout=1) for ind in anode_iota ];
+
+local unpacker_in = [
+    g.pnode({
+        type: 'TensorSetUnpacker',
+        name: 'unpacker_in-' + tools.anodes[ind].name,
+        data: {
+            tags: ['raw%d' % ind, 'raw%d' % ind, 'raw%d' % ind, 'raw%d' % ind],
+            types: ['waveform', 'channels', 'bad:cmm_range', 'bad:cmm_channel'],
+        },
+    }, nin=1, nout=4) for ind in anode_iota ];
+
+local packer_init = [
+    g.pnode({
+        type: 'TensorPacker',
+        name: 'packer_init-' + tools.anodes[ind].name,
+        data: {
+            multiplicity: 2
+        },
+    }, nin=2, nout=1) for ind in anode_iota ];
+
+local unpacker_init = [
+    g.pnode({
+        type: 'TensorSetUnpacker',
+        name: 'unpacker_init-' + tools.anodes[ind].name,
+        data: {
+            tags: ['raw%d' % ind, 'raw%d' % ind],
+            types: ['waveform', 'channels'],
+        },
+    }, nin=1, nout=2) for ind in anode_iota ];
+
+local packer_tight = [
+    g.pnode({
+        type: 'TensorPacker',
+        name: 'packer_tight-' + tools.anodes[ind].name,
+        data: {
+            multiplicity: 4
+        },
+    }, nin=4, nout=1) for ind in anode_iota ];
+
+local unpacker_packer = [g.intern(innodes=[unpacker_in[n],],
+                         outnodes=[decon_tight0[n],],
+                         centernodes=[packer_init[n],decon_init[n],unpacker_init[n],packer_tight[n],],
+                         edges=
+                         [
+                             g.edge(unpacker_in[n], packer_init[n], 0, 0),
+                             g.edge(unpacker_in[n], packer_init[n], 1, 1),
+                             g.edge(packer_init[n], decon_init[n], 0, 0),
+                             g.edge(decon_init[n], unpacker_init[n], 0, 0),
+                             g.edge(unpacker_init[n], packer_tight[n], 0, 0),
+                             g.edge(unpacker_init[n], packer_tight[n], 1, 1),
+                             g.edge(unpacker_in[n], packer_tight[n], 2, 2),
+                             g.edge(unpacker_in[n], packer_tight[n], 3, 3),
+                             g.edge(packer_tight[n], decon_tight0[n], 0, 0),
+                         ],
+                         name='fanpipe-%d'%n) for n in anode_iota];
+
 local pipelines = [
     g.pipeline([
+        chsels[n],
         // hio_orig[n],
         nf_pipes[n],
         
         tf2t[n],
-        decon_init[n],
-        decon_tight0[n],
+        unpacker_packer[n],
         tt2f[n],
         hio_nf[n],
         
@@ -296,6 +352,18 @@ local retagger = g.pnode({
   },
 }, nin=1, nout=1);
 
+local fansel = g.pnode({
+  type: 'ChannelSplitter',
+  name: 'peranode',
+  data: {
+    anodes: [wc.tn(a) for a in tools.anodes],
+    tag_rules: [{
+      frame: {
+        '.*': 'orig%d' % ind,
+      },
+    } for ind in anode_iota],
+  },
+}, nin=1, nout=nanodes, uses=tools.anodes);
 
 local fanpipe = g.intern(innodes=[fansel],
                          outnodes=[fanin],
