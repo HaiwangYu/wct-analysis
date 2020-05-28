@@ -24,4 +24,5 @@ shoreman/
 ts-models/
 zio/test
 zio/ts-model
+csi-kokkos/*
 *__pycache__
