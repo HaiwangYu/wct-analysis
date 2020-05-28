@@ -22,4 +22,6 @@ sp_eval/
 tbb_dev/
 shoreman/
 ts-models/
+zio/test
+zio/ts-model
 *__pycache__

@@ -1,5 +1,5 @@
 broker_domo: zio domo-broker -s server
-worker_echo: python worker_echo.py
-client_tens: python client_tensor.py
-worker_ts: python worker_ts.py
-client_h5: python client_h5.py
+#worker_echo: python worker_echo.py -v
+#client_tens: python client_tensor.py
+worker_ts: python worker_ts.py -v
+#client_h5: python client_h5.py
