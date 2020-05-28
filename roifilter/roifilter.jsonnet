@@ -13,7 +13,7 @@ local tools_maker = import 'pgrapher/common/tools.jsonnet';
 local params = import 'pgrapher/experiment/pdsp/simparams.jsonnet';
 local tools_orig = tools_maker(params);
 local tools = tools_orig {
-  anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
+//   anodes : [tools_orig.anodes[0],tools_orig.anodes[1]],
 };
 local sim_maker = import 'pgrapher/experiment/pdsp/sim.jsonnet';
 local sim = sim_maker(params, tools);
