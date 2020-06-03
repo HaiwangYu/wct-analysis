@@ -55,7 +55,7 @@ function(params, tools, anode, iplane=0, override = {}) {
         name: 'decon_tighter_%s_'%anode.name+'%d'%iplane,
         data: {
             tag: "raw%d"%anode.data.ident,
-            out_type: "decon_tight",
+            out_type: "decon_tighter",
             filters: [
                 "HfFilter:%s"%hf_tight_filters[iplane],
                 "LfFilter:%s"%lf_tighter_filters[iplane],
