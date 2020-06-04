@@ -17,6 +17,14 @@ function(params, tools, anode, iplane=0, override = {}) {
         types = ["waveform"],
         nin = 3, nout = 1, uses=[anode]),
     
+    local packer = g.pnode({
+            type: 'TensorPacker',
+            name: 'roi_dnn_packer_%s_'%anode.name+'%d'%iplane,
+            data: {
+                multiplicity: 1
+            },
+        }, nin=1, nout=1),
+    
     local tt2f = g.pnode({
         type: 'TaggedTensorSetFrame',
         name: 'roi_dnn_tt2f_%s_'%anode.name+'%d'%iplane,
@@ -29,10 +37,11 @@ function(params, tools, anode, iplane=0, override = {}) {
     
     ret : g.intern(innodes=[roidnn,],
         outnodes=[tt2f],
-        centernodes=[],
+        centernodes=[packer],
         edges=
         [
-            g.edge(roidnn, tt2f, 0, 0),
+            g.edge(roidnn, packer, 0, 0),
+            g.edge(packer, tt2f, 0, 0),
         ],
         name='roi_dnn_%s_'%anode.name+'%d'%iplane,),
 }.ret

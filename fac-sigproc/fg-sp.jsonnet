@@ -14,9 +14,17 @@ function(params, tools, anode, override = {}) {
         frame: {
             '.*': 'raw%d' % ind,
         },
-        } for ind in std.range(0, 1)],
+        } for ind in std.range(0, 2)],
     },
     }, nin=1, nout=3, uses=tools.anodes),
+
+    local fanout = g.pnode({
+        type:'FrameFanout',
+        name:'fgsp_fanout_%s'%anode.name,
+        data:{
+            multiplicity:3,
+            tags: [],
+        }}, nin=1, nout=3),
 
     local roi_init_maker = import 'roi-init.jsonnet',
     local roi_init_0 = roi_init_maker(params, tools, anode, 0),
@@ -56,7 +64,7 @@ function(params, tools, anode, override = {}) {
     },
     }, nin=3, nout=1),
 
-    fgsp : g.intern(innodes=[fansel],
+    fgsp : g.intern(innodes=[fanout],
         outnodes=[fanin],
         centernodes=[
             roi_init_0, roi_init_1, roi_init_2,
@@ -65,9 +73,9 @@ function(params, tools, anode, override = {}) {
             ],
         edges=
         [
-            g.edge(fansel, roi_init_0, 0, 0),
-            g.edge(fansel, roi_init_1, 1, 0),
-            g.edge(fansel, roi_init_2, 2, 0),
+            g.edge(fanout, roi_init_0, 0, 0),
+            g.edge(fanout, roi_init_1, 1, 0),
+            g.edge(fanout, roi_init_2, 2, 0),
 
             g.edge(roi_init_0, mp, 0, 0),
             g.edge(roi_init_1, mp, 0, 1),

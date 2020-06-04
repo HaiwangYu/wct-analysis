@@ -207,15 +207,15 @@ local tt2f = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-// local chsels = [
-//     g.pnode({
-//         type: 'ChannelSelector',
-//         name: 'chsel-' + tools.anodes[ind].name,
-//         data: {
-//             channels: std.range(2560*ind, 2560*ind+800-1),
-//             tags: ['orig%d' % ind],
-//         },
-//     }, nin=1, nout=1) for ind in anode_iota ];
+local chsels = [
+    g.pnode({
+        type: 'ChannelSelector',
+        name: 'chsel-' + tools.anodes[ind].name,
+        data: {
+            channels: std.range(2560*ind, 2560*ind+800-1),
+            tags: ['orig%d' % ind],
+        },
+    }, nin=1, nout=1) for ind in anode_iota ];
 
 // local roi_init_maker = import 'roi-init.jsonnet';
 // local roi_init = [roi_init_maker(params, tools, anode, 0) for anode in tools.anodes];

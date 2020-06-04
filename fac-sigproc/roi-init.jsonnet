@@ -33,7 +33,7 @@ function(params, tools, anode, iplane=0, override = {}) {
             type: 'TensorFanout',
             name: 'fanout_init_%s_'%anode.name+'%d'%iplane,
             data: {
-                multiplicity: 2,
+                multiplicity: 4,
             },
         }, nin=1, nout=4),
 
