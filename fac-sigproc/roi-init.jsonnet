@@ -70,9 +70,8 @@ function(params, tools, anode, iplane=0, override = {}) {
         name: 'roi_th_tight_%s_'%anode.name+'%d'%iplane,
         data: {
             tag: "raw%d"%anode.data.ident,
-            input0: "decon_tight",
-            input1: "decon_tighter",
-            cmm: "bad",
+            intypes: ["bad:cmm_range","bad:cmm_channel","decon_tight","decon_tighter"],
+            outtypes: ["roi_tight", "rms"],
             },
         }, tags = ['raw%d' % anode.data.ident,'raw%d' % anode.data.ident,],
         types = ['roi_tight', 'rms'],
@@ -83,6 +82,8 @@ function(params, tools, anode, iplane=0, override = {}) {
         name: 'roi_refine_%s_'%anode.name+'%d'%iplane,
         data: {
             tag: "raw%d"%anode.data.ident,
+            intypes: ["roi_tight","rms"],
+            outtypes: ["waveform",],
             },
         }, tags = ['raw%d' % anode.data.ident,],
         types = ['roi%d'%anode.data.ident,],
