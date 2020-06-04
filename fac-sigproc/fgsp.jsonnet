@@ -207,112 +207,36 @@ local tt2f = [g.pnode({
     for n in std.range(0, std.length(tools.anodes) - 1)
     ];
 
-local chsels = [
-    g.pnode({
-        type: 'ChannelSelector',
-        name: 'chsel-' + tools.anodes[ind].name,
-        data: {
-            channels: std.range(2560*ind, 2560*ind+800-1),
-            tags: ['orig%d' % ind],
-        },
-    }, nin=1, nout=1) for ind in anode_iota ];
-
-// local spfilt = import 'pgrapher/experiment/pdsp/sp-filters.jsonnet';
-// local pc = tools.perchanresp_nameuses;
-// local decon_init = [g.pnode({
-//     type: 'Decon2DResponse',
-//     name: 'decon_init%d' % n,
-//     data: {
-//         anode: wc.tn(tools.anodes[n]),
-//         per_chan_resp: pc.name,
-//         field_response: wc.tn(tools.field),
-//         tag: "raw%d"%n,
-//         },
-//         }, nin=1, nout=1, uses=[tools.anodes[n], tools.field] + pc.uses + spfilt),
-//         for n in std.range(0, std.length(tools.anodes) - 1)];
-
-// local decon_tight0 = [g.pnode({
-//     type: 'Decon2DFilter',
-//     name: 'decon_tight0%d' % n,
-//     data: {
-//         tag: "raw%d"%n,
-//         filters: [
-//             "HfFilter:Wiener_tight_U",
-//             "LfFilter:ROI_tight_lf",
-//         ],
-//         },
-//         }, nin=1, nout=1, uses=[] + spfilt),
-//         for n in std.range(0, std.length(tools.anodes) - 1)];
-
-// local unpacker_in = [
+// local chsels = [
 //     g.pnode({
-//         type: 'TensorSetUnpacker',
-//         name: 'unpacker_in-' + tools.anodes[ind].name,
+//         type: 'ChannelSelector',
+//         name: 'chsel-' + tools.anodes[ind].name,
 //         data: {
-//             tags: ['raw%d' % ind, 'raw%d' % ind, 'raw%d' % ind, 'raw%d' % ind],
-//             types: ['waveform', 'channels', 'bad:cmm_range', 'bad:cmm_channel'],
+//             channels: std.range(2560*ind, 2560*ind+800-1),
+//             tags: ['orig%d' % ind],
 //         },
-//     }, nin=1, nout=4) for ind in anode_iota ];
+//     }, nin=1, nout=1) for ind in anode_iota ];
 
-// local packer_init = [
-//     g.pnode({
-//         type: 'TensorPacker',
-//         name: 'packer_init-' + tools.anodes[ind].name,
-//         data: {
-//             multiplicity: 2
-//         },
-//     }, nin=2, nout=1) for ind in anode_iota ];
+// local roi_init_maker = import 'roi-init.jsonnet';
+// local roi_init = [roi_init_maker(params, tools, anode, 0) for anode in tools.anodes];
 
-// local unpacker_init = [
-//     g.pnode({
-//         type: 'TensorSetUnpacker',
-//         name: 'unpacker_init-' + tools.anodes[ind].name,
-//         data: {
-//             tags: ['raw%d' % ind, 'raw%d' % ind],
-//             types: ['waveform', 'channels'],
-//         },
-//     }, nin=1, nout=2) for ind in anode_iota ];
 
-// local packer_tight = [
-//     g.pnode({
-//         type: 'TensorPacker',
-//         name: 'packer_tight-' + tools.anodes[ind].name,
-//         data: {
-//             multiplicity: 4
-//         },
-//     }, nin=4, nout=1) for ind in anode_iota ];
-
-// local unpacker_packer = [g.intern(innodes=[unpacker_in[n],],
-//                          outnodes=[decon_tight0[n],],
-//                          centernodes=[packer_init[n],decon_init[n],unpacker_init[n],packer_tight[n],],
-//                          edges=
-//                          [
-//                              g.edge(unpacker_in[n], packer_init[n], 0, 0),
-//                              g.edge(unpacker_in[n], packer_init[n], 1, 1),
-//                              g.edge(packer_init[n], decon_init[n], 0, 0),
-//                              g.edge(decon_init[n], unpacker_init[n], 0, 0),
-//                              g.edge(unpacker_init[n], packer_tight[n], 0, 0),
-//                              g.edge(unpacker_init[n], packer_tight[n], 1, 1),
-//                              g.edge(unpacker_in[n], packer_tight[n], 2, 2),
-//                              g.edge(unpacker_in[n], packer_tight[n], 3, 3),
-//                              g.edge(packer_tight[n], decon_tight0[n], 0, 0),
-//                          ],
-//                          name='fanpipe-%d'%n) for n in anode_iota];
-
-local roi_init_maker = import 'roi-init.jsonnet';
-local roi_init = [roi_init_maker(params, tools, anode, 0) for anode in tools.anodes];
+local fg_sp_maker = import 'fg-sp.jsonnet';
+local fg_sp = [fg_sp_maker(params, tools, anode) for anode in tools.anodes];
 
 local pipelines = [
     g.pipeline([
-        chsels[n],
+        // chsels[n],
         // hio_orig[n],
         nf_pipes[n],
         
-        tf2t[n],
-        roi_init[n].make_roi_init(),
-        tt2f[n],
-        hio_nf[n],
+        // tf2t[n],
+        // roi_init[n],
+        // tt2f[n],
         
+        fg_sp[n],
+        
+        hio_nf[n],
         // sp_pipes[n],
         // hio_sp[n],
         ],'nfsp_pipe_%d' % n)
