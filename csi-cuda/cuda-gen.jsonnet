@@ -425,34 +425,10 @@ local retagger = g.pnode({
 local sink = sim.frame_sink;
 
 // wire-cell - trackdepo as input
-// local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
-//                       edges = 
-//                       [
-//                         g.edge(track_depos, drifter, 0, 0),
-//                         g.edge(drifter, depo_fanout_1st, 0, 0),
-//                       ] +
-//                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
-//                       );
-// local app = {
-//   type: engine,
-//   data: {
-//     edges: g.edges(graph),
-//   },
-// };
-// local cmdline = { 
-//     type: "wire-cell",
-//     data: {
-//         plugins: ["WireCellGen", "WireCellPgraph", "WireCellSio", "WireCellSigProc", "WireCellHio"],
-//         apps: ["Pgrapher"]
-//     }   
-// };
-// [cmdline] + g.uses(graph) + [app]
-
-// lar - g4 sim as input
-local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
+local graph = g.intern(innodes=[track_depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
                       edges = 
                       [
-                        g.edge(wcls_input.depos, drifter, 0, 0),
+                        g.edge(track_depos, drifter, 0, 0),
                         g.edge(drifter, depo_fanout_1st, 0, 0),
                       ] +
                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
@@ -463,5 +439,29 @@ local app = {
     edges: g.edges(graph),
   },
 };
-g.uses(graph) + [app]
+local cmdline = { 
+    type: "wire-cell",
+    data: {
+        plugins: ["WireCellGen", "WireCellPgraph", "WireCellSio", "WireCellSigProc", "WireCellHio", "WireCellTbb"],
+        apps: [engine]
+    }   
+};
+[cmdline] + g.uses(graph) + [app]
+
+// lar - g4 sim as input
+// local graph = g.intern(innodes=[wcls_input.depos], centernodes=[drifter, depo_fanout_1st]+multipass, outnodes=[],
+//                       edges = 
+//                       [
+//                         g.edge(wcls_input.depos, drifter, 0, 0),
+//                         g.edge(drifter, depo_fanout_1st, 0, 0),
+//                       ] +
+//                       [g.edge(depo_fanout_1st, multipass[n],  n, 0) for n in anode_iota],
+//                       );
+// local app = {
+//   type: engine,
+//   data: {
+//     edges: g.edges(graph),
+//   },
+// };
+// g.uses(graph) + [app]
 

@@ -15,7 +15,7 @@ physics :{
             apps: [@local::wc_engine]
 
             logsinks: ["stdout", "cuda-gen.log"]
-            loglevels: ["debug"]
+            loglevels: ["info"]
 
             plugins: ["WireCellPgraph", "WireCellGen","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellHio","WireCellTbb",'WireCellImg',"WireCellPytorch"]
 
